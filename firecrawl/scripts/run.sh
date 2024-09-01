@@ -1,0 +1,1 @@
+./fc -url="http://example.com" -depth=3 -format="json" -output="output.json"
