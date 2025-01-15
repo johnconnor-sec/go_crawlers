@@ -8,7 +8,7 @@ import (
 
 func ToMarkdown(title, content string) string {
 	// First remove all JavaScript
-	jsPattern := `<script\b[^<]*(?:(!<\/script>)<[^<]*)*<\/script>`
+	jsPattern := `<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>`
 	re := regexp.MustCompile(jsPattern)
 	cleanContent := re.ReplaceAllString(content, "")
 
@@ -34,54 +34,79 @@ func ToMarkdown(title, content string) string {
 	var contentLines []string
 	var inCodeBlock bool
 	var currentSection []string
+	var codeBlockContent []string
+	var codeBlockLang string
 
 	for _, line := range lines {
-		line = strings.TrimSpace(line)
+		trimmedLine := strings.TrimSpace(line)
 
 		// Skip navigation elements
-		if line == "" ||
-			strings.HasPrefix(line, "►") ||
-			strings.HasPrefix(line, "▼") ||
-			strings.HasPrefix(line, "→") {
+		if trimmedLine == "" ||
+			strings.HasPrefix(trimmedLine, "►") ||
+			strings.HasPrefix(trimmedLine, "▼") ||
+			strings.HasPrefix(trimmedLine, "→") {
 			continue
 		}
 
-		// Handle code blocks
-		if strings.HasPrefix(line, "```") {
-			inCodeBlock = !inCodeBlock
-			contentLines = append(contentLines, line)
-			continue
+		// Handle code block start
+		if strings.HasPrefix(trimmedLine, "```") {
+			if !inCodeBlock {
+				// Starting a new code block
+				if len(currentSection) > 0 {
+					contentLines = append(contentLines, strings.Join(currentSection, " "))
+					currentSection = nil
+				}
+				inCodeBlock = true
+				codeBlockLang = strings.TrimPrefix(trimmedLine, "```")
+				continue
+			} else {
+				// Ending a code block
+				inCodeBlock = false
+				// Preserve the original formatting of code blocks
+				if len(codeBlockContent) > 0 {
+					if codeBlockLang != "" {
+						contentLines = append(contentLines, "```"+codeBlockLang)
+					} else {
+						contentLines = append(contentLines, "```")
+					}
+					contentLines = append(contentLines, codeBlockContent...)
+					contentLines = append(contentLines, "```")
+					codeBlockContent = nil
+				}
+				continue
+			}
 		}
 
-		// Preserve formatting inside code blocks
+		// Handle content inside code blocks
 		if inCodeBlock {
-			contentLines = append(contentLines, line)
+			// Preserve the original line including indentation
+			codeBlockContent = append(codeBlockContent, line)
 			continue
 		}
 
 		// Handle headers
-		if strings.HasPrefix(line, "#") {
+		if strings.HasPrefix(trimmedLine, "#") {
 			if len(currentSection) > 0 {
 				contentLines = append(contentLines, strings.Join(currentSection, " "))
 				currentSection = nil
 			}
-			contentLines = append(contentLines, line)
+			contentLines = append(contentLines, trimmedLine)
 			continue
 		}
 
 		// Handle lists
-		if strings.HasPrefix(line, "-") || strings.HasPrefix(line, "*") || 
-		   strings.HasPrefix(line, "+") || regexp.MustCompile(`^\d+\.`).MatchString(line) {
+		if strings.HasPrefix(trimmedLine, "-") || strings.HasPrefix(trimmedLine, "*") || 
+		   strings.HasPrefix(trimmedLine, "+") || regexp.MustCompile(`^\d+\.`).MatchString(trimmedLine) {
 			if len(currentSection) > 0 {
 				contentLines = append(contentLines, strings.Join(currentSection, " "))
 				currentSection = nil
 			}
-			contentLines = append(contentLines, line)
+			contentLines = append(contentLines, trimmedLine)
 			continue
 		}
 
 		// Accumulate regular paragraph text
-		currentSection = append(currentSection, line)
+		currentSection = append(currentSection, trimmedLine)
 	}
 
 	// Add any remaining section
