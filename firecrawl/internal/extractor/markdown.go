@@ -8,7 +8,7 @@ import (
 
 func ToMarkdown(title, content string) string {
 	// First remove all JavaScript
-	jsPattern := `<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>`
+	jsPattern := `<script\b[^<]*(?:(!<\/script>)<[^<]*)*<\/script>`
 	re := regexp.MustCompile(jsPattern)
 	cleanContent := re.ReplaceAllString(content, "")
 

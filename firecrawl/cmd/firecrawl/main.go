@@ -36,7 +36,7 @@ func main() {
 	for _, r := range results {
 		var output string
 		if *format == "json" {
-			jsonOutput, err := extractor.ToJSON(r.Title, r.Content)
+			jsonOutput, err := extractor.ToJSON(r.Title, r.Content, r.Paragraph, r.List, r.Header)
 			if err != nil {
 				log.Fatal(err)
 			}

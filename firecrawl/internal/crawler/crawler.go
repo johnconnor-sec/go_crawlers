@@ -52,4 +52,7 @@ type Result struct {
 	URL     string
 	Title   string
 	Content string
+  Header  string
+  Paragraph string
+  List    []string
 }
